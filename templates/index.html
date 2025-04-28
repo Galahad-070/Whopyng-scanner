@@ -1,0 +1,167 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Port Scanner UI</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      height: 100vh;
+      display: flex;
+      background-color: #000;
+      color: #fff;
+    }
+    .left-panel, .right-panel {
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .left-panel {
+      width: 40%;
+      background-color: #222;
+      border-right: 1px solid #444;
+    }
+    .right-panel {
+      width: 60%;
+      background-color: #333;
+    }
+    h2 {
+      margin-top: 0;
+      color: #fff;
+    }
+    .form-section {
+      margin-bottom: 20px;
+    }
+    label {
+      display: inline-block; /* Align labels inline with inputs */
+      margin: 8px 0 4px;
+      color: #ccc;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      background-color: #444;
+      color: #fff;
+      border: 1px solid #555;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    /* Added CSS to align radio buttons and checkboxes with their labels */
+    .form-section input[type="radio"],
+    .form-section input[type="checkbox"] {
+      margin-right: 10px;
+      vertical-align: middle;  /* Align input with the text */
+    }
+  </style>
+</head>
+<body>
+  <div class="left-panel">
+    <h2>Scan Options</h2>
+    <div class="form-section">
+      <label for="ip">Target IP (with CIDR):</label>
+      <input type="text" id="ip" placeholder="e.g., 192.168.1.1/24">
+    </div>
+
+    <div class="form-section">
+      <label>Ports to Scan:</label><br>
+      <input type="radio" id="top1000" name="ports" value="1000" checked>
+      <label for="top1000">Scan Top 1000 Ports</label><br>
+      <input type="radio" id="allports" name="ports" value="all">
+      <label for="allports">Scan All Ports</label>
+    </div>
+
+    <div class="form-section">
+      <label>Additional Options:</label><br>
+      <input type="checkbox" id="os-detect" name="options" value="os">
+      <label for="os-detect">OS Detection</label><br>
+      <input type="checkbox" id="vuln-check" name="options" value="vuln">
+      <label for="vuln-check">Vulnerability Checking</label>
+    </div>
+
+    <div class="form-section">
+      <button onclick="startScan()">Start Scan</button>
+    </div>
+  </div>
+
+  <div class="right-panel">
+    <h2>Scan Output</h2>
+    <pre id="output">Awaiting scan...</pre>
+  </div>
+
+  <div class="form-section">
+    <button onclick="exitScan()">Exit</button>
+  </div>
+
+<script>
+  function exitScan() {
+    fetch('http://127.0.0.1:5000/exit', {
+      method: 'POST',
+    })
+    .then(response => response.json())
+    .then(data => {
+      document.getElementById('output').textContent = "Scan has been stopped.";
+    })
+    .catch(error => {
+      document.getElementById('output').textContent = 'Error: ' + error;
+    });
+  }
+</script>
+
+<script>
+  function startScan() {
+    const ip = document.getElementById('ip').value;
+    const portScan = document.querySelector('input[name="ports"]:checked').value;
+    const osDetect = document.getElementById('os-detect').checked;
+    const vulnCheck = document.getElementById('vuln-check').checked;
+
+    // Send POST request to the Flask backend to initiate the scan
+    fetch('http://127.0.0.1:5000/start-scan', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        ip: ip,
+        portScan: portScan,
+        osDetect: osDetect,
+        vulnCheck: vulnCheck
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      document.getElementById('output').textContent = "Scan has started. Waiting for results...";
+      startStream();  // Start the SSE stream to get live updates
+    })
+    .catch(error => {
+      document.getElementById('output').textContent = 'Error: ' + error;
+    });
+  }
+
+  function startStream() {
+    const output = document.getElementById("output");
+    const eventSource = new EventSource('http://127.0.0.1:5000/stream');
+
+    eventSource.onmessage = function(e) {
+        console.log("Received message:", e.data);  // Debug log to confirm data reception
+        output.textContent += e.data + "\n";  // Append new lines to output
+        output.scrollTop = output.scrollHeight;  // Auto-scroll to the bottom
+    };
+
+    eventSource.onerror = function() {
+        console.log("Error with SSE connection");  // Log any connection error
+        eventSource.close();  // Close the connection if an error occurs
+    };
+
+}
+
+</script>
+</body>
+</html>
