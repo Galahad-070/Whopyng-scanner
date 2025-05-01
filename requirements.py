@@ -8,7 +8,7 @@ def check_files():
         st_time=time.time()
         if (st_time - os.path.getmtime("known_exploited_vulnerabilities.json")) > 604800:
             print("Vulnerability list older than 7 days... refreshing")
-            os.system("wget -O https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json")
+            os.system("wget -O known_exploited_vulnerabilities.json https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json")
         
     else:
         print("vulnerability list not found.... downloading.....")
