@@ -19,4 +19,4 @@ def check_files():
         print("Ports list found....")
     else:
         print("Ports list not found.... Downloading....")
-        os.system("wget https://github.com/djcas9/ports.json/blob/master/ports.json")
+        os.system("wget https://raw.githubusercontent.com/djcas9/ports.json/refs/heads/master/ports.json")
